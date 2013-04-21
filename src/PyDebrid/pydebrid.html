@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="de">
+	<head>
+		<title>pyDebrid</title>
+		<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.min.css" rel="stylesheet">
+		<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+		<script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>
+		<script>
+			function genElement(e) {
+				li = $( document.createElement('li') );
+				li.attr('id', e['id']);
+				li.attr('class', 'alert alert-info');
+				closebutton = $('<a>', {href: '/remove?link=' + e['id'], 'data-dismiss': 'alert', 'class': 'close', text: 'delete'});
+				text = $('<span>', {text: e['filename']});
+				barcontainer = $('<div>', {'class': 'progress progress-striped active'});
+				bar = $('<div>', {'class': 'bar'});
+				bar.css('width', e['perc'] + '%');
+				perc = $('<span>', {'class': 'perc', text: e['perc'] + '%'});
+				barcontainer.append(bar);
+				li.append(closebutton);
+				li.append(text);
+				li.append(barcontainer);
+				li.append(perc);
+				return(li);
+
+			}
+			function setPerc(id, perc) {
+				$('#'+ id + ' .bar').css('width', perc + '%');
+				$('#'+ id + ' .perc').text(perc + '%');
+
+			}
+			function update() {
+				$.getJSON('/list', function(data) {
+				  $('#queue li').each(function (element) {
+					  if(data[$(this).attr('id')] == undefined) {
+						  $(this).remove();
+						  } else {
+					  }
+
+				  });
+				  $.each(data, function(key, val) {
+					  if( $('li#' + key) == []) {
+						$('#queue').append(genElement(val));
+					} else {
+						setPerc(key, val['perc']);
+
+					}
+				  });
+				});
+				timer = window.setTimeout(update, 1000)
+			}
+			var timer  = window.setTimeout(update, 1000)
+			$('.alert').alert()
+			$('#nav a').click(function (e) {
+				  e.preventDefault();
+				  $(this).tab('show');
+				})
+		</script>
+		<style type='text/css'>
+			body {
+				background-color: #CCC;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container" style="padding: 15px; background: white; border-radius: 15px;">
+			<div class="row">
+				<div class="span12" style="text-align: center;">
+					<h1 class="page-header">pyDebrid</h1>
+				</div>
+			</div>
+				<ul class="nav nav-tabs" id="nav">
+					<li class="active"><a href="#och" data-toggle="tab">One Click Hoster</a></li>
+					<li><a href="#ddl" data-toggle="tab">Direct Download</a></li>
+					<li><a href="#alc" data-toggle="tab">Alkohol trinken</a></li>
+					<li><a href="#torrent" data-toggle="tab">Torrent</a></li>
+				</ul>
+				<div class="tab-content">
+					<div class="tab-pane active" id="och">
+							<form action="/add_och" method="post">
+								<textarea name="och_links" class="field span12" rows="5" placeholder="http://download.com/1337/file.tar.gz"></textarea>
+								<input type="submit" value="Add to queue" />
+							</form>
+					</div>
+					<div class="tab-pane" id="ddl">
+						<form action="/add_ddl" method="post">
+							<textarea name="ddl_links" class="field span12" rows="5" placeholder="http://download.com/file.tar.gz"></textarea>
+							<input type="submit" value="Add to queue" />
+						</form>
+					</div>
+					<div class="tab-pane" id="alc">
+							<p>Chelou!</p>
+					</div>
+					<div class="tab-pane" id="torrent">
+							<p>Not yet implemented</p>
+					</div>
+			</div>
+			{% if message %}
+				<div class="alert alert-success">
+					<button type="button" class="close" data-dismiss="alert">&times;</button>
+					{{ message }}
+				</div>
+			{% endif %}
+			<div class="row">
+				<div class="span12" style="text-align: center;">
+					<h2>Queue</h2>
+				</div>
+			</div>
+			<div class="row">
+				<div>
+					<div class="span12">
+						<ul id="queue" style="list-style: none">
+							{% for filename, item in queue.items() %}
+							{% if not item['cancled'] %}
+							<li id="{{ item['id'] }}" class="alert alert-info">
+							<a href="/remove?link={{item['id']}}" class="close" data-dismiss="alert">delete</a>
+								<span>{{ item['filename'] }}</span>
+								<div class="progress progress-striped active">
+									<div class="bar" style="width: {{ item.perc }}%;"></div>
+								</div>
+								<span class="perc">{{ item.perc }}%</span>
+								</li>
+							{% endif %}
+							{% endfor %}
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+
+</html>

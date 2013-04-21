@@ -1,0 +1,23 @@
+#wrapper {
+	border: 1px black dashed;
+	width: 800px;
+	background-color: lightgrey;
+	margin-right: auto;
+	margin-left: auto;
+}
+#header{
+	text-align: center;
+}
+#OCH {
+	float: left;
+	width: 50%;
+	border-radius: 15px;
+	background-color: #f8f8f8;
+}
+#torrents {
+	border-radius: 15px;
+	background-color: #c8c8c8;
+}
+#queue{
+	clear: both;
+}
