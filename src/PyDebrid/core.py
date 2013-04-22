@@ -127,24 +127,20 @@ class MyResponseHandler(http.server.BaseHTTPRequestHandler):
 		return postvars
 
 	def post_addddl(self):
-		self.send_response(303)
-		self.send_header("Location", "/")
-		self.end_headers()
+		self.send_std_header()
 		data = self.parse_POST()
 		links = data[b'ddl_links'][0].split()
 		for link in links:
 			self.server.pimp.addddl(str(link, 'utf-8'))
+		self.write(json.dumps({'message': 'Added Direct Donwload Links'}))
 
 	def post_addoch(self):
-		#		self.send_response(303)
-		#		self.send_header("Location", "/")
-		#		self.end_headers()
 		self.send_std_header()
 		data = self.parse_POST()
 		links = data[b'och_links'][0].split()
 		for link in links:
 			self.server.pimp.add(str(link, 'utf-8'))
-		self.write(json.dumps(self.server.pimp.links))
+		self.write(json.dumps({'message': 'Added One Click Hoster Links'}))
 
 	def get_index(self):
 		self.send_std_header()
@@ -165,11 +161,10 @@ class MyResponseHandler(http.server.BaseHTTPRequestHandler):
 			self.end_headers()
 
 	def get_remove(self, queries):
+		self.send_std_header()
 		if queries['link'][0] in self.server.pimp.links:
 			self.server.pimp.bitchlist[queries['link'][0]].cancle()
-		self.send_response(303)
-		self.send_header("Location", "/")
-		self.end_headers()
+		self.write(json.dumps({'message': 'Removed Link'}))
 
 	def get_bootstrap_css(self):
 		self.send_response(200)

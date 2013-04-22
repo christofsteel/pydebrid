@@ -6,11 +6,19 @@
 		<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
 		<script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>
 		<script>
+			function addMessage(message) {
+				div = $('<div>', {'class': 'alert alert-success'});
+				span = $('<span>', {'text': message});
+				button = $('<button>', {'type': 'button', 'class': 'close', 'data-dismiss': 'alert', text:'x'});
+				div.append(span);
+				div.append(button);
+				$('#messagearea').append(div);
+			}
 			function genElement(e) {
 				li = $( document.createElement('li') );
 				li.attr('id', e['id']);
 				li.attr('class', 'alert alert-info');
-				closebutton = $('<a>', {href: '/remove?link=' + e['id'], 'data-dismiss': 'alert', 'class': 'close', text: 'delete'});
+				closebutton = $('<a>', {href: 'javascript:remove("' + e['id']+'")', 'class': 'close', text: 'delete'});
 				text = $('<span>', {text: e['filename']});
 				barcontainer = $('<div>', {'class': 'progress progress-striped active'});
 				bar = $('<div>', {'class': 'bar'});
@@ -22,7 +30,13 @@
 				li.append(barcontainer);
 				li.append(perc);
 				return(li);
+			}
 
+			function remove(id) {
+				$.getJSON('/remove?link=' + id, function(data) {
+					addMessage(data['message']);
+					$('#'+id).remove()
+				})
 			}
 			function setPerc(id, perc) {
 				$('#'+ id + ' .bar').css('width', perc + '%');
@@ -50,7 +64,7 @@
 				timer = window.setTimeout(update, 1000)
 			}
 			var timer  = window.setTimeout(update, 1000);
-			
+
 			$('.alert').alert();
 			$('#nav a').click(function (e) {
 				  e.preventDefault();
@@ -83,20 +97,6 @@
 								<input type="submit" value="Add to queue" />
 							</form>
 					</div>
-					<script>
-						$('#och_form').submit(function () {
-							frm = $('#och_form')
-							$.ajax({
-							    type: frm.attr('method'),
-							    url: frm.attr('action'),
-							    data: frm.serialize(),
-							    success: function (data) {
-							    }
-							});
-
-							return false;
-						});
-					</script>
 					<div class="tab-pane" id="ddl">
 						<form action="/add_ddl" method="post">
 							<textarea name="ddl_links" class="field span12" rows="5" placeholder="http://download.com/file.tar.gz"></textarea>
@@ -110,12 +110,24 @@
 							<p>Not yet implemented</p>
 					</div>
 			</div>
-			{% if message %}
-				<div class="alert alert-success">
-					<button type="button" class="close" data-dismiss="alert">&times;</button>
-					{{ message }}
-				</div>
-			{% endif %}
+					<script>
+						$('form').submit(function () {
+							frm = $(this)
+							$.ajax({
+							    type: frm.attr('method'),
+							    url: frm.attr('action'),
+							    data: frm.serialize(),
+							    success: function (data) {
+								    addMessage($.parseJSON(data)['message'])
+							    }
+							});
+							frm.find('textarea').val('');
+
+							return false;
+						});
+					</script>
+			<div id="messagearea">
+			</div>
 			<div class="row">
 				<div class="span12" style="text-align: center;">
 					<h2>Queue</h2>
@@ -128,7 +140,7 @@
 							{% for filename, item in queue.items() %}
 							{% if not item['cancled'] %}
 							<li id="{{ item['id'] }}" class="alert alert-info">
-							<a href="/remove?link={{item['id']}}" class="close" data-dismiss="alert">delete</a>
+							<a href="javascript:remove('{{item['id']}}')" class="close">delete</a>
 								<span>{{ item['filename'] }}</span>
 								<div class="progress progress-striped active">
 									<div class="bar" style="width: {{ item.perc }}%;"></div>
