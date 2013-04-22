@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+import argparse
+from configparser import ConfigParser
+from PyDebrid.core import PyDebrid
+
+if __name__ == "__main__":
+	conf_parser = argparse.ArgumentParser(
+		add_help=False
+		)
+	conf_parser.add_argument("--config", "-c",
+				 help="Specify config file", metavar="FILE")
+	args, remaining_argv = conf_parser.parse_known_args()
+	defaults = {
+		"host" : "0.0.0.0",
+		"port": 8180,
+		"max_par": 2,
+		"output_folder": "/tmp"
+		}
+	if args.config:
+		config = ConfigParser()
+		config.read([args.config])
+		defaults.update(dict(config.items("PyDebrid")))
+
+	parser = argparse.ArgumentParser(
+		parents=[conf_parser],
+		description=__doc__,
+		formatter_class=argparse.RawDescriptionHelpFormatter,
+		)
+	parser.set_defaults(**defaults)
+	parser.add_argument('--username' , '-u', help="Your Alldebrid username")
+	parser.add_argument("--password", help="Your Alldebrid password")
+	parser.add_argument("--output-folder", help="Download location (Default /tmp)")
+	parser.add_argument("--host", "-l",  help="Bind to specific host (Default 0.0.0.0)")
+	parser.add_argument("--port", "-p", help="Listen Port (Default 8180)")
+	parser.add_argument("--max-par",  help="Maximum parallel Downloads (Default 2)")
+	args = parser.parse_args(remaining_argv)
+	PyDebrid(args.username, args.password, args.output_folder, args.host, int(args.port), int(args.max_par), background=False)

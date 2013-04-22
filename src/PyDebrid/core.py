@@ -2,8 +2,6 @@
 
 import threading
 import shutil
-import argparse
-from configparser import ConfigParser
 import http.cookiejar
 import http.server
 import urllib
@@ -15,6 +13,8 @@ import os
 import queue
 from jinja2 import FileSystemLoader, Environment, PackageLoader
 from cgi import parse_header, parse_multipart
+
+data_path = os.path.join(os.path.dirname(__file__),'data')
 
 class AlldebridRequest:
 	def __init__(self):
@@ -106,7 +106,7 @@ class DownloadBitch(threading.Thread):
 
 class MyPimpServer(http.server.HTTPServer):
 	def __init__(self, host, port, handler, pimp):
-		self.env = Environment(loader=FileSystemLoader(".")) # TODO allgemeiner
+		self.env = Environment(loader=FileSystemLoader(data_path))
 		http.server.HTTPServer.__init__(self, (host, port), handler)
 		self.pimp = pimp
 		self.env.filters['urlquote_plus'] = urllib.parse.quote_plus
@@ -136,13 +136,15 @@ class MyResponseHandler(http.server.BaseHTTPRequestHandler):
 			self.server.pimp.addddl(str(link, 'utf-8'))
 
 	def post_addoch(self):
-		self.send_response(303)
-		self.send_header("Location", "/")
-		self.end_headers()
+		#		self.send_response(303)
+		#		self.send_header("Location", "/")
+		#		self.end_headers()
+		self.send_std_header()
 		data = self.parse_POST()
 		links = data[b'och_links'][0].split()
 		for link in links:
 			self.server.pimp.add(str(link, 'utf-8'))
+		self.write(json.dumps(self.server.pimp.links))
 
 	def get_index(self):
 		self.send_std_header()
@@ -163,22 +165,22 @@ class MyResponseHandler(http.server.BaseHTTPRequestHandler):
 			self.end_headers()
 
 	def get_remove(self, queries):
+		if queries['link'][0] in self.server.pimp.links:
+			self.server.pimp.bitchlist[queries['link'][0]].cancle()
 		self.send_response(303)
 		self.send_header("Location", "/")
 		self.end_headers()
-		if queries['link'][0] in self.server.pimp.links:
-			self.server.pimp.bitchlist[queries['link'][0]].cancle()
 
 	def get_bootstrap_css(self):
 		self.send_response(200)
 		self.send_header("Content-type", "text/css")
 		send.end_headers()
-		with open("bootstrap.min.css", "r") as file:
+		with open(os.path.join(data_path,"bootstrap.min.css"), "r") as file:
 			self.write(file.read())
 
 	def get_bootstrap_js(self):
 		self.send_std_header()
-		with open("bootstrap.min.js", "r") as file:
+		with open(os.path.join(data_path,"bootstrap.min.js"), "r") as file:
 			self.write(file.read())
 
 	def do_GET(self):
@@ -234,56 +236,3 @@ class PyDebrid:
 		server = MyPimpServer(host, port, MyResponseHandler, pimp)
 		server.serve_forever();
 
-if __name__ == "__main__":
-	"""	ar = AlldebridRequest()
-	user = input("Username: ")
-	password = getpass.getpass()
-	ar.login(user, password)
-	pimp = DownloadPimp(5, ar)
-	pimp.start()
-	try:
-		server = MyPimpServer('localhost', 8080, MyResponseHandler, pimp)
-		server.serve_forever()
-	except KeyboardInterrupt:
-		print('^C received, shutting down server')
-	server.soerver_close()"""
-	conf_parser = argparse.ArgumentParser(
-	    # Turn off help, so we print all options in response to -h
-		add_help=False
-		)
-	conf_parser.add_argument("--config", "-c",
-				 help="Specify config file", metavar="FILE")
-	args, remaining_argv = conf_parser.parse_known_args()
-	defaults = {
-		"output_folder" : "some default",
-		"host" : "0.0.0.0",
-		"port": 8180,
-		"max_par": 2,
-		"output_folder": "/tmp"
-		}
-	if args.config:
-		config = ConfigParser()
-		config.read([args.config])
-		defaults.update(dict(config.items("Defaults")))
-
-	# Don't surpress add_help here so it will handle -h
-	parser = argparse.ArgumentParser(
-		# Inherit options from config_parser
-		parents=[conf_parser],
-		# print script description with -h/--help
-		description=__doc__,
-		# Don't mess with format of description
-		formatter_class=argparse.RawDescriptionHelpFormatter,
-		)
-
-
-	#	parser = argparse.ArgumentParser(description='PyDebrid is a Downloader for Alldebrid.')
-	parser.set_defaults(**defaults)
-	parser.add_argument('--username' , '-u', help="Your Alldebrid username")
-	parser.add_argument("--password", help="Your Alldebrid password")
-	parser.add_argument("--output-folder", help="Download location (Default /tmp)")
-	parser.add_argument("--host", "-l",  help="Bind to specific host (Default 0.0.0.0)")
-	parser.add_argument("--port", "-p", help="Listen Port (Default 8180)")
-	parser.add_argument("--max-par",  help="Maximum parallel Downloads (Default 2)")
-	args = parser.parse_args(remaining_argv)
-	PyDebrid(args.username, args.password, args.output_folder, args.host, int(args.port), int(args.max_par), background=False)
