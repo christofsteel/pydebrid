@@ -7,7 +7,7 @@
 		<script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>
 		<script>
 			function addMessage(message) {
-				div = $('<div>', {'class': 'alert alert-success'});
+				div = $('<div>', {'class': 'alert alert-success in fade'});
 				span = $('<span>', {'text': message});
 				button = $('<button>', {'type': 'button', 'class': 'close', 'data-dismiss': 'alert', text:'x'});
 				div.append(span);
@@ -17,7 +17,7 @@
 			function genElement(e) {
 				li = $( document.createElement('li') );
 				li.attr('id', e['id']);
-				li.attr('class', 'alert alert-info');
+				li.attr('class', 'alert alert-info in fade');
 				closebutton = $('<a>', {href: 'javascript:remove("' + e['id']+'")', 'class': 'close', text: 'delete'});
 				text = $('<span>', {text: e['filename']});
 				barcontainer = $('<div>', {'class': 'progress progress-striped active'});
@@ -94,7 +94,16 @@
 					<div class="tab-pane active" id="och">
 							<form id="och_form" action="/add_och" method="post">
 								<textarea name="och_links" class="field span12" rows="5" placeholder="http://download.com/1337/file.tar.gz"></textarea>
-								<input type="submit" value="Add to queue" />
+								<button type="button" class="btn btn-primary" data-toggle="collapse" data-target="#och_collapse">
+									Options
+								</button>
+								<div class="collapse" id="och_collapse">
+									<div class="well">
+										<label for="unpack" class="checkbox"><input type="checkbox" value="unpack" name="unpack" id="unpack">Auto unpack</label>
+										<label for="password"><input type="text" placeholder="Password" id="password" name="password"></label>
+									</div>
+								</div>
+								<input type="submit" class="btn" value="Add to queue" />
 							</form>
 					</div>
 					<div class="tab-pane" id="ddl">
@@ -136,10 +145,10 @@
 			<div class="row">
 				<div>
 					<div class="span12">
-						<ul id="queue" style="list-style: none">
+						<ul id="queue" class="well" style="list-style: none">
 							{% for filename, item in queue.items() %}
 							{% if not item['cancled'] %}
-							<li id="{{ item['id'] }}" class="alert alert-info">
+							<li id="{{ item['id'] }}" class="alert alert-info in fade">
 							<a href="javascript:remove('{{item['id']}}')" class="close">delete</a>
 								<span>{{ item['filename'] }}</span>
 								<div class="progress progress-striped active">

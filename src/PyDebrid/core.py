@@ -11,6 +11,7 @@ import json
 import hashlib
 import os
 import queue
+import socket
 from jinja2 import FileSystemLoader, Environment, PackageLoader
 from cgi import parse_header, parse_multipart
 
@@ -40,6 +41,7 @@ class DownloadPimp(threading.Thread):
 		self.queue = queue.Queue()
 		self.loads = queue.Queue(maxsize=max_par)
 		self.links = {}
+		self.groups = {}
 		self.folder = folder
 		self.bitchlist = {}
 		self.alldebrid = alldebrid
@@ -54,9 +56,13 @@ class DownloadPimp(threading.Thread):
 		self.queue.put(dlink)
 		self.links[dlink['id']] = dlink
 
-	def add(self, link):
+	def add(self, link, gname, unpack):
+		if not gname in self.groups:
+			self.groups[gname] = []
 		dlink = self.alldebrid.getLink(link)
+		self.groups[gname].append(dlink['id'])
 		dlink['loading'] = False
+		dlink['group'] = gname
 		dlink['perc'] = 0
 		self.queue.put(dlink)
 		self.links[dlink['id']] = dlink
@@ -71,6 +77,15 @@ class DownloadPimp(threading.Thread):
 			self.bitchlist[link['id']] = bitch
 			bitch.start()
 
+class MyURLOpener(urllib.request.FancyURLopener):
+    """Create sub-class in order to overide error 206.  This error means a
+       partial file is being sent,
+       which is ok in this case.  Do nothing with this error.
+    """
+    def http_error_206(self, url, fp, errcode, errmsg, headers, data=None):
+        pass
+
+
 class DownloadBitch(threading.Thread):
 	def __init__(self, link, pimp, chunksize=2**18):
 		threading.Thread.__init__(self)
@@ -84,22 +99,49 @@ class DownloadBitch(threading.Thread):
 		self.link['cancled'] = True
 		self._cancled = True
 
-	def run(self):
-		print("Downloading " + self.link['filename'] + " (" + self.link['link'] + ")")
-		with open(os.path.join(self.pimp.folder, self.link['filename'] + '.fuck'), 'wb') as fuck:
-			with urllib.request.urlopen(self.link['link']) as download:
-				self.clength = download.getheader("Content-Length")
-				chunk = download.read(self.chunksize)
-				while chunk != b'' and not self._cancled:
-					self.link['perc'] = round(self.downloaded / int(self.clength)  * 100, 1)
-					fuck.write(chunk)
-					self.downloaded += len(chunk)
+	def load(self, timeout, resume):
+		try:
+			myUrlclass = MyURLOpener()
+			dlFile = os.path.join(self.pimp.folder, self.link['filename'] + '.fuck')
+			if os.path.exists(dlFile):
+				print("file exists")
+				mode = 'ab'
+				existSize = os.path.getsize(dlFile)
+				#If the file exists, then only download the remainder
+				myUrlclass.addheader("Range","bytes=%s-" % (existSize))
+				self.downloaded = existSize
+			else:
+				mode = 'wb'
+
+			with open(dlFile, mode) as fuck:
+				with urllib.request.urlopen(self.link['link'], timeout = timeout) as download:
+					self.clength = download.getheader("Content-Length")
+					print(download.getcode())
 					chunk = download.read(self.chunksize)
+					while chunk != b'' and not self._cancled:
+						self.link['perc'] = round(self.downloaded / int(self.clength)  * 100, 1)
+						fuck.write(chunk)
+						self.downloaded += len(chunk)
+						chunk = download.read(self.chunksize)
+		except socket.timeout:
+			resume = os.path.getsize(os.path.join(self.pimp.folder, self.link['filename'] + '.fuck'))
+			print("Timeout retrying " + self.link['filename'] + " (" + str(resume) + ")")
+			self.load(timeout, resume)
+
+
+	def run(self):
+		timeout = 10
+		print("Downloading " + self.link['filename'] + " (" + self.link['link'] + ")")
+		self.load(timeout, 0)
 		if self._cancled:
 			print("Cancled " + self.link['filename'])
 			os.remove(os.path.join(self.pimp.folder, self.link['filename'] + '.fuck'))
 		else:
 			print("Finished " + self.link['filename'])
+			self.pimp.groups[self.link['group']].remove(self.link['id'])
+			if self.pimp.groups[self.link['group']] == []:
+				print("Finished Group " + self.link['group'])
+
 			shutil.move(os.path.join(self.pimp.folder, self.link['filename'] + ".fuck"), os.path.join(self.pimp.folder, self.link['filename']))
 		self.pimp.loads.get()
 		del self.pimp.links[self.link['id']]
@@ -112,6 +154,9 @@ class MyPimpServer(http.server.HTTPServer):
 		self.env.filters['urlquote_plus'] = urllib.parse.quote_plus
 
 class MyResponseHandler(http.server.BaseHTTPRequestHandler):
+	def log_message(self, format, *args):
+		pass
+
 	def do_HEAD(self):
 		self.send_std_header()
 
@@ -138,8 +183,10 @@ class MyResponseHandler(http.server.BaseHTTPRequestHandler):
 		self.send_std_header()
 		data = self.parse_POST()
 		links = data[b'och_links'][0].split()
+		gname = hashlib.md5(str.join("", [str(link, "utf-8") for link in links]).encode("utf-8")).hexdigest()
+		unpack = (data[b'unpack'][0].split() == b'unpack')
 		for link in links:
-			self.server.pimp.add(str(link, 'utf-8'))
+			self.server.pimp.add(str(link, 'utf-8'), gname, unpack)
 		self.write(json.dumps({'message': 'Added One Click Hoster Links'}))
 
 	def get_index(self):
