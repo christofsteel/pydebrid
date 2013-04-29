@@ -19,6 +19,7 @@
 				li.attr('id', e['id']);
 				li.attr('class', 'alert alert-info in fade');
 				closebutton = $('<a>', {href: 'javascript:remove("' + e['id']+'")', 'class': 'close', text: 'delete'});
+				restartbutton = $('<a>', {href: 'javascript:restart("' + e['id']+'")', 'class': 'close', text: 'restart'});
 				text = $('<span>', {text: e['filename']});
 				barcontainer = $('<div>', {'class': 'progress progress-striped active'});
 				bar = $('<div>', {'class': 'bar'});
@@ -26,6 +27,7 @@
 				perc = $('<span>', {'class': 'perc', text: e['perc'] + '%'});
 				barcontainer.append(bar);
 				li.append(closebutton);
+				li.append(restartbutton);
 				li.append(text);
 				li.append(barcontainer);
 				li.append(perc);
@@ -33,7 +35,7 @@
 			}
 
 			function remove(id) {
-				$.getJSON('/remove?link=' + id, function(data) {
+				$.getJSON('/remove/' + id, function(data) {
 					addMessage(data['message']);
 					$('#'+id).remove()
 				})
@@ -53,7 +55,7 @@
 
 				  });
 				  $.each(data, function(key, val) {
-					  if( $('li#' + key).length == 0) {
+					  if( $('li#' + key).length == 0 && !(val['cancled'])) {
 						$('#queue').append(genElement(val));
 					} else {
 						setPerc(key, val['perc']);
@@ -87,12 +89,12 @@
 				<ul class="nav nav-tabs" id="nav">
 					<li class="active"><a href="#och" data-toggle="tab">One Click Hoster</a></li>
 					<li><a href="#ddl" data-toggle="tab">Direct Download</a></li>
-					<li><a href="#alc" data-toggle="tab">Alkohol trinken</a></li>
+					<li><a href="#serienjunkies" data-toggle="tab">SerienJunkies</a></li>
 					<li><a href="#torrent" data-toggle="tab">Torrent</a></li>
 				</ul>
 				<div class="tab-content">
 					<div class="tab-pane active" id="och">
-							<form id="och_form" action="/add_och" method="post">
+							<form id="och_form" class="sendlinks" action="/add_och" method="post">
 								<textarea name="och_links" class="field span12" rows="5" placeholder="http://download.com/1337/file.tar.gz"></textarea>
 								<button type="button" class="btn btn-primary" data-toggle="collapse" data-target="#och_collapse">
 									Options
@@ -107,27 +109,59 @@
 							</form>
 					</div>
 					<div class="tab-pane" id="ddl">
-						<form action="/add_ddl" method="post">
+						<form action="/add_ddl" class="sendlinks" method="post">
 							<textarea name="ddl_links" class="field span12" rows="5" placeholder="http://download.com/file.tar.gz"></textarea>
 							<input type="submit" value="Add to queue" />
 						</form>
 					</div>
-					<div class="tab-pane" id="alc">
-							<p>Chelou!</p>
+					<div class="tab-pane" id="serienjunkies">
+						<form action="/sj" method="post">
+							<div class="input-append">
+								<input type="text" name="link" />
+								<input type="submit" class="btn" value="Get Secure IMG" />
+							</div>
+						</form>
+						<script>
+							$('#serienjunkies form').submit(function () {
+								frm = $(this);
+								$.ajax({
+									type: frm.attr('method'),
+									url: frm.attr('action'),
+									data: frm.serialize(),
+									success: function(result) {
+										$('#captchaid').attr("value", result['id']);
+										$('#captchaimg').attr('src', "/" + result['id'] + "/captcha.jpg");
+										$('#captchaform').collapse({toggle: true});
+									}
+								})
+
+								return false;
+							});
+						</script>
+						<form class="collapse sendlinks" id="captchaform" action="/sjcaptcha" method="post">
+							<div class="well span4 pagination-centered">
+								<p><img src="captcha.jpg" id="captchaimg" /><p />
+								<input type="hidden" name="captchaid" value="" id="captchaid" />
+								<div class="input-append">
+									<input type="text" id="captcha" class="input-small" name="captcha" />
+									<input type="submit" class="btn" value="Add" />
+								</div>
+							</div>
+						</form>
 					</div>
 					<div class="tab-pane" id="torrent">
 							<p>Not yet implemented</p>
 					</div>
 			</div>
 					<script>
-						$('form').submit(function () {
+						$('form.sendlinks').submit(function () {
 							frm = $(this)
 							$.ajax({
 							    type: frm.attr('method'),
 							    url: frm.attr('action'),
 							    data: frm.serialize(),
 							    success: function (data) {
-								    addMessage($.parseJSON(data)['message'])
+								    addMessage(data['message']);
 							    }
 							});
 							frm.find('textarea').val('');
@@ -150,6 +184,7 @@
 							{% if not item['cancled'] %}
 							<li id="{{ item['id'] }}" class="alert alert-info in fade">
 							<a href="javascript:remove('{{item['id']}}')" class="close">delete</a>
+							<a href="javascript:restart('{{item['id']}}')" class="close">restart</a>
 								<span>{{ item['filename'] }}</span>
 								<div class="progress progress-striped active">
 									<div class="bar" style="width: {{ item.perc }}%;"></div>
