@@ -19,5 +19,4 @@ class AlldebridRequest:
 		response = self.opener.open("http://www.alldebrid.de/service.php?" + params)
 		json_response = json.loads(str(response.read(), "utf-8"))
 		json_response['filename'] = os.path.basename(json_response['link'])
-		json_response['id'] = hashlib.md5(json_response['filename'].encode('utf-8')).hexdigest()
 		return json_response

@@ -4,34 +4,47 @@
 		<title>pyDebrid</title>
 		<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.min.css" rel="stylesheet">
 		<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+		<script src="http://tinysort.sjeiti.com/src/jquery.tinysort.min.js"></script>
 		<script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>
 		<script>
 			function addMessage(message) {
 				div = $('<div>', {'class': 'alert alert-success in fade'});
 				span = $('<span>', {'text': message});
-				button = $('<button>', {'type': 'button', 'class': 'close', 'data-dismiss': 'alert', text:'x'});
+				button = $('<button>', {'type': 'button', 'class': 'close', 'data-dismiss': 'alert'});
+				closei = $('<i>', {'class': 'icon-remove'});
+				button.append(closei);
 				div.append(span);
 				div.append(button);
 				$('#messagearea').append(div);
 			}
 			function genElement(e) {
-				li = $( document.createElement('li') );
+				li = $('<li>')
+				li.data(e)
 				li.attr('id', e['id']);
 				li.attr('class', 'alert alert-info in fade');
-				closebutton = $('<a>', {href: 'javascript:remove("' + e['id']+'")', 'class': 'close', text: 'delete'});
-				restartbutton = $('<a>', {href: 'javascript:restart("' + e['id']+'")', 'class': 'close', text: 'restart'});
-				text = $('<span>', {text: e['filename']});
-				barcontainer = $('<div>', {'class': 'progress progress-striped active'});
+				closebutton = $('<a>', {href: 'javascript:remove("' + e['id']+'")', 'class': 'close'});
+				closei = $('<i>', {'class': 'icon-remove'})
+				restartbutton = $('<a>', {href: 'javascript:restart("' + e['id']+'")', 'class': 'close'});
+				restarti = $('<i>', {'class': 'icon-refresh'})
+				text = $('<strong>', {text: e['filename']});
+				barcontainer = $('<div>', {'class': 'progress'});
 				bar = $('<div>', {'class': 'bar'});
 				bar.css('width', e['perc'] + '%');
-				perc = $('<span>', {'class': 'perc', text: e['perc'] + '%'});
+				perc = $('<div>', {'class': 'perc', text: e['perc'] + '%'});
+				rate = $('<div>', {'class': 'rate', text: Math.round(e['rate']/102.4)/10 + ' kB/s'});
 				barcontainer.append(bar);
+				closebutton.append(closei);
 				li.append(closebutton);
+				restartbutton.append(restarti);
 				li.append(restartbutton);
 				li.append(text);
 				li.append(barcontainer);
 				li.append(perc);
+				li.append(rate);
 				return(li);
+			}
+			function compare(a, b) {
+				return($(a).data()['perc'] > $(b).data()['perc']);
 			}
 
 			function remove(id) {
@@ -40,38 +53,68 @@
 					$('#'+id).remove()
 				})
 			}
-			function setPerc(id, perc) {
-				$('#'+ id + ' .bar').css('width', perc + '%');
-				$('#'+ id + ' .perc').text(perc + '%');
+			function setPerc(id, link) {
+				$('#'+ id + ' .perc').text(link['perc'] + '%');
+				$('#'+ id + ' .rate').text(Math.round(link['rate']/102.4)/10 + ' kB/s');
+				$('#'+ id).data()['perc'] = link['perc'];
 
 			}
 			function update() {
 				$.getJSON('/list', function(data) {
+/*					var idPercDict = {}
+					$('#queue li').each(function (element) {
+						idPercDict[$(this).attr('id')] = $(this).attr('data-perc');
+					});
+					linklist = data['links'];
+					$('#queue').empty();
+					for(i = 0; i < linklist.length; i++) {
+						link = linklist[i];
+						perc = link['perc'];
+						link['perc'] = idPercDict[link['id']];
+						elem = genElement(link);
+						$('#queue').prepend(elem);
+						link['perc'] = perc;
+						setPerc(link['id'], perc);
+					}*/
+
 				  $('#queue li').each(function (element) {
 					  if(data[$(this).attr('id')] == undefined) {
 						  $(this).remove();
 						  } else {
 					  }
-
 				  });
 				  $.each(data, function(key, val) {
 					  if( $('li#' + key).length == 0 && !(val['cancled'])) {
 						$('#queue').append(genElement(val));
 					} else {
-						setPerc(key, val['perc']);
+						setPerc(key, val);
 
 					}
+				  });
+//				  $('#queue li').tsort({data:'perc'});
+				  $list = $('#queue');
+				  $listLi = $('li', $list);
+				  $listLi.sort(compare);
+				  $.each($listLi, function(index, row){
+						$list.prepend(row);
+				    });
+
+				  // Resize the Bars
+				  $('#queue li').each(function(id) {
+					  perc = $(this).data('perc');
+					  $(this).find('.bar').css('width', perc + "%");
 				  });
 				});
 				timer = window.setTimeout(update, 1000)
 			}
-			var timer  = window.setTimeout(update, 1000);
 
 			$('.alert').alert();
 			$('#nav a').click(function (e) {
 				  e.preventDefault();
 				  $(this).tab('show');
 				});
+
+			window.setTimeout(update, 1000)
 		</script>
 		<style type='text/css'>
 			body {
@@ -96,7 +139,8 @@
 					<div class="tab-pane active" id="och">
 							<form id="och_form" class="sendlinks" action="/add_och" method="post">
 								<textarea name="och_links" class="field span12" rows="5" placeholder="http://download.com/1337/file.tar.gz"></textarea>
-								<button type="button" class="btn btn-primary" data-toggle="collapse" data-target="#och_collapse">
+								<input type="submit" class="btn btn-primary" value="Add" />
+								<button type="button" class="btn" data-toggle="collapse" data-target="#och_collapse">
 									Options
 								</button>
 								<div class="collapse" id="och_collapse">
@@ -105,13 +149,12 @@
 										<label for="password"><input type="text" placeholder="Password" id="password" name="password"></label>
 									</div>
 								</div>
-								<input type="submit" class="btn" value="Add to queue" />
 							</form>
 					</div>
 					<div class="tab-pane" id="ddl">
 						<form action="/add_ddl" class="sendlinks" method="post">
 							<textarea name="ddl_links" class="field span12" rows="5" placeholder="http://download.com/file.tar.gz"></textarea>
-							<input type="submit" value="Add to queue" />
+							<input type="submit" class="btn btn-primary" value="Add" />
 						</form>
 					</div>
 					<div class="tab-pane" id="serienjunkies">
@@ -144,7 +187,7 @@
 								<input type="hidden" name="captchaid" value="" id="captchaid" />
 								<div class="input-append">
 									<input type="text" id="captcha" class="input-small" name="captcha" />
-									<input type="submit" class="btn" value="Add" />
+									<input type="submit" class="btn btn-primary" value="Add" />
 								</div>
 							</div>
 						</form>
@@ -180,19 +223,6 @@
 				<div>
 					<div class="span12">
 						<ul id="queue" class="well" style="list-style: none">
-							{% for filename, item in queue.items() %}
-							{% if not item['cancled'] %}
-							<li id="{{ item['id'] }}" class="alert alert-info in fade">
-							<a href="javascript:remove('{{item['id']}}')" class="close">delete</a>
-							<a href="javascript:restart('{{item['id']}}')" class="close">restart</a>
-								<span>{{ item['filename'] }}</span>
-								<div class="progress progress-striped active">
-									<div class="bar" style="width: {{ item.perc }}%;"></div>
-								</div>
-								<span class="perc">{{ item.perc }}%</span>
-								</li>
-							{% endif %}
-							{% endfor %}
 						</ul>
 					</div>
 				</div>

@@ -6,6 +6,13 @@ import urllib.request
 import socket
 import shutil
 import threading
+import time
+
+class WentWrong(Exception):
+	pass
+
+class Cancled(Exception):
+	pass
 
 class DownloadPimp(threading.Thread):
 	def __init__(self, max_par, folder, alldebrid):
@@ -21,10 +28,12 @@ class DownloadPimp(threading.Thread):
 	def addddl(self, link):
 		dlink = {}
 		dlink['link'] = link
+		dlink['och'] = False
 		dlink['filename'] = os.path.basename(link)
 		dlink['id'] = hashlib.md5(dlink['filename'].encode('utf-8')).hexdigest()
 		dlink['loading'] = False
 		dlink['perc'] = 0
+		dlink['rate'] = 0
 		self.queue.put(dlink)
 		self.links[dlink['id']] = dlink
 
@@ -32,10 +41,14 @@ class DownloadPimp(threading.Thread):
 		if not gname in self.groups:
 			self.groups[gname] = []
 		dlink = self.alldebrid.getLink(link)
+		dlink['och'] = True
+		dlink['id'] = hashlib.md5(dlink['filename'].encode('utf-8')).hexdigest()
 		self.groups[gname].append(dlink['id'])
+		dlink['olink'] = link
 		dlink['loading'] = False
 		dlink['group'] = gname
 		dlink['perc'] = 0
+		dlink['rate'] = 0
 		self.queue.put(dlink)
 		self.links[dlink['id']] = dlink
 
@@ -43,6 +56,8 @@ class DownloadPimp(threading.Thread):
 		while True:
 			print("Empty Queue")
 			link = self.queue.get()
+			if link['och']:
+				link['link'] = self.alldebrid.getLink(link['olink'])['link'] # Update Link
 			self.loads.put(link)
 			link['loading'] = True
 			bitch = DownloadBitch(link, self)
@@ -70,7 +85,7 @@ class DownloadBitch(threading.Thread):
 		self.link['cancled'] = True
 		self._cancled = True
 
-	def load(self, timeout, resume):
+	def load(self, timeout):
 		try:
 			myUrlclass = MyURLOpener()
 			dlFile = os.path.join(self.pimp.folder, self.link['filename'] + '.fuck')
@@ -83,37 +98,59 @@ class DownloadBitch(threading.Thread):
 				self.downloaded = existSize
 			else:
 				mode = 'wb'
-			if not self._cancled:
-				with open(dlFile, mode) as fuck:
-					with urllib.request.urlopen(self.link['link'], timeout = timeout) as download:
-						self.clength = download.getheader("Content-Length")
-						print(download.getcode())
+			if self._cancled:
+				raise Cancled
+			with open(dlFile, mode) as fuck:
+				with urllib.request.urlopen(self.link['link'], timeout = timeout) as download:
+					self.clength = download.getheader("Content-Length")
+					if self.clength == None:
+						raise WentWrong
+					chunk = download.read(self.chunksize)
+					while chunk != b'':
+						stime = time.time()
+						if self._cancled:
+							raise Cancled
+						self.link['perc'] = round(self.downloaded / int(self.clength)  * 100, 1)
+						fuck.write(chunk)
+						self.downloaded += len(chunk)
 						chunk = download.read(self.chunksize)
-						while chunk != b'' and not self._cancled:
-							self.link['perc'] = round(self.downloaded / int(self.clength)  * 100, 1)
-							fuck.write(chunk)
-							self.downloaded += len(chunk)
-							chunk = download.read(self.chunksize)
-		except socket.timeout:
-			resume = os.path.getsize(os.path.join(self.pimp.folder, self.link['filename'] + '.fuck'))
-			print("Timeout retrying " + self.link['filename'] + " (" + str(resume) + ")")
-			self.load(timeout, resume)
+						etime = time.time()
+						self.link['rate'] = self.chunksize / (etime - stime)
+		except (urllib.error.URLError, socket.timeout):
+			if self._cancled:
+				raise Cancled
+			print("Timeout retrying " + self.link['filename'])
+			raise WentWrong
 
 
 	def run(self):
-		timeout = 10
+		timeout = 2
 		print("Downloading " + self.link['filename'] + " (" + self.link['link'] + ")")
-		self.load(timeout, 0)
-		if self._cancled:
+		try:
+			self.load(timeout)
+			print("Finished " + self.link['filename'])
+			if self.link['och']:
+				self.pimp.groups[self.link['group']].remove(self.link['id'])
+				if self.pimp.groups[self.link['group']] == []:
+					print("Finished Group " + self.link['group'])
+			del self.pimp.links[self.link['id']]
+			shutil.move(os.path.join(self.pimp.folder, self.link['filename'] + ".fuck"), os.path.join(self.pimp.folder, self.link['filename']))
+
+		except Cancled:
 			print("Cancled " + self.link['filename'])
 			os.remove(os.path.join(self.pimp.folder, self.link['filename'] + '.fuck'))
-		else:
-			print("Finished " + self.link['filename'])
-			self.pimp.groups[self.link['group']].remove(self.link['id'])
-			if self.pimp.groups[self.link['group']] == []:
-				print("Finished Group " + self.link['group'])
-			shutil.move(os.path.join(self.pimp.folder, self.link['filename'] + ".fuck"), os.path.join(self.pimp.folder, self.link['filename']))
+			del self.pimp.links[self.link['id']]
+
+		except WentWrong:
+			print("Something went wrong, putting download back into the queue")
+			if self.link['och']:
+				self.pimp.groups[self.link['group']].remove(self.link['id'])
+			del self.pimp.links[self.link['id']]
+			if self.link['och']:
+				self.pimp.add(self.link['olink'], self.link['group'], False) # TODO unpack
+			else:
+				self.pimp.addddl(self.link['link'])
+
 		self.pimp.loads.get()
-		del self.pimp.links[self.link['id']]
 
 
