@@ -11,6 +11,9 @@ import time
 class WentWrong(Exception):
 	pass
 
+class AlreadyDownloaded(Exception):
+	pass
+
 class Cancled(Exception):
 	pass
 
@@ -54,10 +57,13 @@ class DownloadPimp(threading.Thread):
 
 	def run(self):
 		while True:
-			print("Empty Queue")
 			link = self.queue.get()
+			print("Pop")
 			if link['och']:
-				link['link'] = self.alldebrid.getLink(link['olink'])['link'] # Update Link
+				try:
+					link['link'] = self.alldebrid.getLink(link['olink'])['link'] # Update Link
+				except OSError:
+					raise WentWrong
 			self.loads.put(link)
 			link['loading'] = True
 			bitch = DownloadBitch(link, self)
@@ -89,6 +95,9 @@ class DownloadBitch(threading.Thread):
 		try:
 			myUrlclass = MyURLOpener()
 			dlFile = os.path.join(self.pimp.folder, self.link['filename'] + '.fuck')
+			if os.path.exists(os.path.join(self.pimp.folder, self.link['filename'])):
+				print("already downloaded")
+				raise AlreadyDownloaded
 			if os.path.exists(dlFile):
 				print("file exists")
 				mode = 'ab'
@@ -135,6 +144,9 @@ class DownloadBitch(threading.Thread):
 					print("Finished Group " + self.link['group'])
 			del self.pimp.links[self.link['id']]
 			shutil.move(os.path.join(self.pimp.folder, self.link['filename'] + ".fuck"), os.path.join(self.pimp.folder, self.link['filename']))
+
+		except AlreadyDownloaded:
+			del self.pimp.links[self.link['id']]
 
 		except Cancled:
 			print("Cancled " + self.link['filename'])
