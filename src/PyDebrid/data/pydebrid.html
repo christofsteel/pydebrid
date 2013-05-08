@@ -204,6 +204,7 @@
 							    url: frm.attr('action'),
 							    data: frm.serialize(),
 							    success: function (data) {
+								    $('.collapse').collapse({toggle: false});
 								    addMessage(data['message']);
 							    }
 							});

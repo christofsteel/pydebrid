@@ -1,4 +1,4 @@
-from bottle import request, response, route, run, Bottle, TEMPLATE_PATH
+from bottle import request, response, route, run, Bottle, TEMPLATE_PATH, static_file
 from bottle import jinja2_view as view, jinja2_template as template
 from PyDebrid import __path__
 from PyDebrid.application import app
@@ -11,8 +11,13 @@ TEMPLATE_PATH.insert(0,__path__[0]+"/data/")
 def index():
 	return template("pydebrid.html", queue=app.pydebrid.pimp.links)
 
+@app.route("/favicon.ico")
+def favicon():
+	return static_file("favicon.ico", root=__path__[0]+"/data/")
+
 @app.route("/list")
 def list():
+	#return {'links': sorted(app.pydebrid.pimp.links.values(), key = lambda link: link['perc'])}
 	return app.pydebrid.pimp.links
 
 @app.route("/remove/<link>")
@@ -27,14 +32,14 @@ def add_och():
 	gname = hashlib.md5(str.join("", links).encode("utf-8")).hexdigest()
 #	unpack = (data[b'unpack'][0].split() == b'unpack') if b'unpack' in data else False
 	for link in links:
-		app.pydebrid.pimp.add(link, gname, False)
+		app.pydebrid.pimp.add({'olink': link, 'group': gname})
 	return {'message': 'Added links to queue'}
 
 @app.post("/add_ddl")
 def add_ddl():
 	links = request.POST.get('ddl_links', '').strip().split()
 	for link in links:
-		app.pydebrid.pimp.addddl(link)
+		app.pydebrid.pimp.addddl({'link': link})
 	return {'message': 'Added Direct Download Links'}
 
 
@@ -58,6 +63,6 @@ def sjcaptcha():
 	gname = hashlib.md5(str.join("", links).encode("utf-8")).hexdigest()
 #	unpack = (data[b'unpack'][0].split() == b'unpack') if b'unpack' in data else False
 	for link in links:
-		app.pydebrid.pimp.add(link, gname, False)
+		app.pydebrid.pimp.add({'olink': link, 'group': gname})
 	return {'message': 'Added links to queue'}
 

@@ -29,6 +29,6 @@ class PyDebrid:
 		self.pimp.start()
 		self.sj = {}
 		app.pydebrid = self
-		app.run(host=host, port=port, reloader=True, debug=True)
+		app.run(host=host, port=port, reloader=True, debug=False)
 
 

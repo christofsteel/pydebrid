@@ -7,6 +7,7 @@ import socket
 import shutil
 import threading
 import time
+from PyDebrid.alldebrid import AlldebridError
 
 class WentWrong(Exception):
 	pass
@@ -29,46 +30,51 @@ class DownloadPimp(threading.Thread):
 		self.alldebrid = alldebrid
 
 	def addddl(self, link):
-		dlink = {}
-		dlink['link'] = link
-		dlink['och'] = False
-		dlink['filename'] = os.path.basename(link)
-		dlink['id'] = hashlib.md5(dlink['filename'].encode('utf-8')).hexdigest()
-		dlink['loading'] = False
-		dlink['perc'] = 0
-		dlink['rate'] = 0
-		self.queue.put(dlink)
-		self.links[dlink['id']] = dlink
+		link['och'] = False
+		link['filename'] = os.path.basename(link)
+		link['id'] = hashlib.md5(link['filename'].encode('utf-8')).hexdigest()
+		link['loading'] = False
+		if not 'perc' in link:
+			link['perc'] = 0
+		link['rate'] = 0
+		self.queue.put(link)
+		self.links[link['id']] = link
 
-	def add(self, link, gname, unpack):
-		if not gname in self.groups:
-			self.groups[gname] = []
-		dlink = self.alldebrid.getLink(link)
-		dlink['och'] = True
-		dlink['id'] = hashlib.md5(dlink['filename'].encode('utf-8')).hexdigest()
-		self.groups[gname].append(dlink['id'])
-		dlink['olink'] = link
-		dlink['loading'] = False
-		dlink['group'] = gname
-		dlink['perc'] = 0
-		dlink['rate'] = 0
-		self.queue.put(dlink)
-		self.links[dlink['id']] = dlink
+	def add(self, link):
+		print("Added link: " + link['olink'])
+		if not 'link' in link or not 'filename' in link:
+			link['link'], link['filename'] = self.alldebrid.getLink(link['olink'])
+			link['id'] = hashlib.md5(link['filename'].encode('utf-8')).hexdigest()
+
+		if 'group' in link and not link['group'] in self.groups:
+			self.groups[link['group']] = []
+		if 'group' in link:
+			self.groups[link['group']].append(link['id'])
+
+		if not 'perc' in link:
+			link['perc'] = 0
+
+		link['och'] = True
+		link['loading'] = False
+		link['rate'] = 0
+		self.queue.put(link)
+		self.links[link['id']] = link
 
 	def run(self):
 		while True:
 			link = self.queue.get()
 			print("Pop")
-			if link['och']:
-				try:
-					link['link'] = self.alldebrid.getLink(link['olink'])['link'] # Update Link
-				except OSError:
-					raise WentWrong
-			self.loads.put(link)
-			link['loading'] = True
-			bitch = DownloadBitch(link, self)
-			self.bitchlist[link['id']] = bitch
-			bitch.start()
+			try:
+				if link['och']:
+					link['link'], link['filename'] = self.alldebrid.getLink(link['olink']) # Update Link
+				self.loads.put(link)
+				link['loading'] = True
+				bitch = DownloadBitch(link, self)
+				self.bitchlist[link['id']] = bitch
+				bitch.start()
+			except (AlldebridError):
+				print("could not get alldebrid Link, putting back into queue")
+				self.addddl(link)
 
 class MyURLOpener(urllib.request.FancyURLopener):
     """Create sub-class in order to overide error 206.  This error means a
@@ -109,11 +115,16 @@ class DownloadBitch(threading.Thread):
 				mode = 'wb'
 			if self._cancled:
 				raise Cancled
-			with open(dlFile, mode) as fuck:
-				with urllib.request.urlopen(self.link['link'], timeout = timeout) as download:
-					self.clength = download.getheader("Content-Length")
-					if self.clength == None:
-						raise WentWrong
+			with urllib.request.urlopen(self.link['link'], timeout = timeout) as download:
+				if download.status == 206:
+					mode = 'ab'
+					print('Got partial content')
+				else:
+					mode = 'wb'
+				self.clength = download.getheader("Content-Length")
+				if self.clength == None:
+					raise WentWrong
+				with open(dlFile, mode) as fuck:
 					chunk = download.read(self.chunksize)
 					while chunk != b'':
 						stime = time.time()
@@ -154,14 +165,14 @@ class DownloadBitch(threading.Thread):
 			del self.pimp.links[self.link['id']]
 
 		except WentWrong:
-			print("Something went wrong, putting download back into the queue")
+			print("Something went wrong, putting download back into the queue. Perc = " + str(self.link['perc']))
 			if self.link['och']:
 				self.pimp.groups[self.link['group']].remove(self.link['id'])
 			del self.pimp.links[self.link['id']]
 			if self.link['och']:
-				self.pimp.add(self.link['olink'], self.link['group'], False) # TODO unpack
+				self.pimp.add(self.link)
 			else:
-				self.pimp.addddl(self.link['link'])
+				self.pimp.addddl(self.link)
 
 		self.pimp.loads.get()
 

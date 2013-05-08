@@ -4,6 +4,9 @@ import http.cookiejar
 import os
 import hashlib
 
+class AlldebridError(Exception):
+	pass
+
 class AlldebridRequest:
 	def __init__(self):
 		self.cookiejar = http.cookiejar.CookieJar()
@@ -19,4 +22,6 @@ class AlldebridRequest:
 		response = self.opener.open("http://www.alldebrid.de/service.php?" + params)
 		json_response = json.loads(str(response.read(), "utf-8"))
 		json_response['filename'] = os.path.basename(json_response['link'])
-		return json_response
+		if json_response['error']:
+			raise AlldebridError
+		return (json_response['link'], json_response['filename'])
