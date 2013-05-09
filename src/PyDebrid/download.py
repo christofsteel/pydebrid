@@ -31,30 +31,35 @@ class DownloadPimp(threading.Thread):
 
 	def addddl(self, link):
 		link['och'] = False
-		link['filename'] = os.path.basename(link)
+		if not 'filesize' in link:
+			with urllib.request.urlopen(self.link['link'], timeout = 5) as download:
+				self.link['filesize'] = int(download.getheader("Content-Length"))
+		link['filename'] = os.path.basename(link['link'])
 		link['id'] = hashlib.md5(link['filename'].encode('utf-8')).hexdigest()
 		link['loading'] = False
-		if not 'perc' in link:
-			link['perc'] = 0
+
+		if not 'completed' in link:
+			link['completed'] = 0
+
 		link['rate'] = 0
 		self.queue.put(link)
 		self.links[link['id']] = link
 
 	def add(self, link):
-		print("Added link: " + link['olink'])
+		link['och'] = True
 		if not 'link' in link or not 'filename' in link:
-			link['link'], link['filename'] = self.alldebrid.getLink(link['olink'])
+			link['link'], link['filename'], link['filesize'] = self.alldebrid.getLink(link['olink'])
 			link['id'] = hashlib.md5(link['filename'].encode('utf-8')).hexdigest()
 
 		if 'group' in link and not link['group'] in self.groups:
 			self.groups[link['group']] = []
+
 		if 'group' in link:
 			self.groups[link['group']].append(link['id'])
 
-		if not 'perc' in link:
-			link['perc'] = 0
+		if not 'completed' in link:
+			link['completed'] = 0
 
-		link['och'] = True
 		link['loading'] = False
 		link['rate'] = 0
 		self.queue.put(link)
@@ -66,7 +71,7 @@ class DownloadPimp(threading.Thread):
 			print("Pop")
 			try:
 				if link['och']:
-					link['link'], link['filename'] = self.alldebrid.getLink(link['olink']) # Update Link
+					link['link'], link['filename'], link['filesize'] = self.alldebrid.getLink(link['olink']) # Update Link
 				self.loads.put(link)
 				link['loading'] = True
 				bitch = DownloadBitch(link, self)
@@ -90,7 +95,6 @@ class DownloadBitch(threading.Thread):
 		self.link = link
 		self.pimp = pimp
 		self.chunksize = chunksize
-		self.downloaded = 0
 		self._cancled = False
 
 	def cancle(self):
@@ -110,19 +114,19 @@ class DownloadBitch(threading.Thread):
 				existSize = os.path.getsize(dlFile)
 				#If the file exists, then only download the remainder
 				myUrlclass.addheader("Range","bytes=%s-" % (existSize))
-				self.downloaded = existSize
+				self.link['completed'] = existSize
 			else:
 				mode = 'wb'
 			if self._cancled:
 				raise Cancled
 			with urllib.request.urlopen(self.link['link'], timeout = timeout) as download:
+				toLoad = int(download.getheader("Content-Length"))
 				if download.status == 206:
 					mode = 'ab'
-					print('Got partial content')
+					self.link['filesize'] += self.link['completed']
 				else:
 					mode = 'wb'
-				self.clength = download.getheader("Content-Length")
-				if self.clength == None:
+				if toLoad == None:
 					raise WentWrong
 				with open(dlFile, mode) as fuck:
 					chunk = download.read(self.chunksize)
@@ -130,9 +134,8 @@ class DownloadBitch(threading.Thread):
 						stime = time.time()
 						if self._cancled:
 							raise Cancled
-						self.link['perc'] = round(self.downloaded / int(self.clength)  * 100, 1)
 						fuck.write(chunk)
-						self.downloaded += len(chunk)
+						self.link['completed'] += len(chunk)
 						chunk = download.read(self.chunksize)
 						etime = time.time()
 						self.link['rate'] = self.chunksize / (etime - stime)
@@ -140,6 +143,7 @@ class DownloadBitch(threading.Thread):
 			if self._cancled:
 				raise Cancled
 			print("Timeout retrying " + self.link['filename'])
+			time.sleep(2)
 			raise WentWrong
 
 
@@ -149,12 +153,19 @@ class DownloadBitch(threading.Thread):
 		try:
 			self.load(timeout)
 			print("Finished " + self.link['filename'])
+			shutil.move(os.path.join(self.pimp.folder, self.link['filename'] + ".fuck"), os.path.join(self.pimp.folder, self.link['filename']))
 			if self.link['och']:
+				print("A OCH is loaded")
 				self.pimp.groups[self.link['group']].remove(self.link['id'])
+				print(self.pimp.groups)
 				if self.pimp.groups[self.link['group']] == []:
 					print("Finished Group " + self.link['group'])
+					if self.link['unpacK']:
+						if self.link['password']:
+							print("Unpacking " + self.link['filename'] + " with password \"" + self.link['password'] + "\"")
+						else:
+							print("Unpacking " + self.link['filename'])
 			del self.pimp.links[self.link['id']]
-			shutil.move(os.path.join(self.pimp.folder, self.link['filename'] + ".fuck"), os.path.join(self.pimp.folder, self.link['filename']))
 
 		except AlreadyDownloaded:
 			del self.pimp.links[self.link['id']]
@@ -165,7 +176,7 @@ class DownloadBitch(threading.Thread):
 			del self.pimp.links[self.link['id']]
 
 		except WentWrong:
-			print("Something went wrong, putting download back into the queue. Perc = " + str(self.link['perc']))
+			print("Something went wrong, putting download back into the queue.")
 			if self.link['och']:
 				self.pimp.groups[self.link['group']].remove(self.link['id'])
 			del self.pimp.links[self.link['id']]

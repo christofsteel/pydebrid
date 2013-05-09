@@ -29,10 +29,11 @@ def remove(link):
 @app.post("/add_och")
 def add_och():
 	links = request.POST.get('och_links', '').strip().split()
+	unpack = request.POST.get('unpack', '')
+	password = request.POST.get('password', '')
 	gname = hashlib.md5(str.join("", links).encode("utf-8")).hexdigest()
-#	unpack = (data[b'unpack'][0].split() == b'unpack') if b'unpack' in data else False
 	for link in links:
-		app.pydebrid.pimp.add({'olink': link, 'group': gname})
+		app.pydebrid.pimp.add({'olink': link, 'group': gname, 'unpack': unpack, 'password': password})
 	return {'message': 'Added links to queue'}
 
 @app.post("/add_ddl")
@@ -61,8 +62,7 @@ def sjcaptcha():
 	id = request.POST.get('captchaid', '').strip()
 	links = app.pydebrid.sj[id].getLinks(captcha)
 	gname = hashlib.md5(str.join("", links).encode("utf-8")).hexdigest()
-#	unpack = (data[b'unpack'][0].split() == b'unpack') if b'unpack' in data else False
 	for link in links:
-		app.pydebrid.pimp.add({'olink': link, 'group': gname})
+		app.pydebrid.pimp.add({'olink': link, 'group': gname, 'unpack': "unpack", 'password': 'serienjunkies.org'})
 	return {'message': 'Added links to queue'}
 

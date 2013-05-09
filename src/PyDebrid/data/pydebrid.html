@@ -18,6 +18,7 @@
 				$('#messagearea').append(div);
 			}
 			function genElement(e) {
+				e['perc'] = Math.round((e['completed'] / e['filesize'])*1000)/10
 				li = $('<li>')
 				li.data(e)
 				li.attr('id', e['id']);
@@ -30,7 +31,7 @@
 				barcontainer = $('<div>', {'class': 'progress'});
 				bar = $('<div>', {'class': 'bar'});
 				bar.css('width', e['perc'] + '%');
-				perc = $('<div>', {'class': 'perc', text: e['perc'] + '%'});
+				percdiv = $('<div>', {'class': 'perc', text: e['perc'] + '%'});
 				rate = $('<div>', {'class': 'rate', text: Math.round(e['rate']/102.4)/10 + ' kB/s'});
 				barcontainer.append(bar);
 				closebutton.append(closei);
@@ -39,7 +40,7 @@
 				li.append(restartbutton);
 				li.append(text);
 				li.append(barcontainer);
-				li.append(perc);
+				li.append(percdiv);
 				li.append(rate);
 				return(li);
 			}
@@ -54,9 +55,11 @@
 				})
 			}
 			function setPerc(id, link) {
-				$('#'+ id + ' .perc').text(link['perc'] + '%');
-				$('#'+ id + ' .rate').text(Math.round(link['rate']/102.4)/10 + ' kB/s');
-				$('#'+ id).data()['perc'] = link['perc'];
+				$('#' + id).data(link)
+				$('#' + id).data()['perc'] = Math.round(($('#' + id).data()['completed'] / $('#' + id).data()['filesize'])*1000)/10
+				$('#'+ id + ' .perc').text($('#' + id).data()['perc'] + '%');
+				$('#'+ id + ' .rate').text(Math.round($('#' + id).data()['rate']/102.4)/10 + ' kB/s');
+				// $('#'+ id).data()['perc'] = link['perc'];
 
 			}
 			function update() {

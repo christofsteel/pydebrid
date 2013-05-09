@@ -19,9 +19,14 @@ class AlldebridRequest:
 	def getLink(self, link):
 		print("Decrypring " + link)
 		params = urllib.parse.urlencode({'link': link, 'nb': '0', 'json':'true', 'pw':''})
-		response = self.opener.open("http://www.alldebrid.de/service.php?" + params)
-		json_response = json.loads(str(response.read(), "utf-8"))
+		try:
+			response = self.opener.open("http://www.alldebrid.de/service.php?" + params)
+			json_str = str(response.read(), "utf-8")
+		except urllib.error.URLError:
+			raise AlldebridError
+#		print("DEBUG: " + json_str)
+		json_response = json.loads(json_str)
 		json_response['filename'] = os.path.basename(json_response['link'])
 		if json_response['error']:
 			raise AlldebridError
-		return (json_response['link'], json_response['filename'])
+		return (json_response['link'], json_response['filename'], json_response['filesize'])
