@@ -31,7 +31,9 @@
 				barcontainer = $('<div>', {'class': 'progress'});
 				bar = $('<div>', {'class': 'bar'});
 				bar.css('width', e['perc'] + '%');
-				percdiv = $('<div>', {'class': 'perc', text: e['perc'] + '%'});
+				compMB = Math.round(e['completed'] / (1024 * 1024) * 10) / 10
+				sizeMB = Math.round(e['filesize'] / (1024 * 1024) * 10) / 10
+				percdiv = $('<div>', {'class': 'perc', text: compMB + ' MiB / ' + sizeMB + ' MiB (' + e['perc'] + '%)'});
 				rate = $('<div>', {'class': 'rate', text: Math.round(e['rate']/102.4)/10 + ' kB/s'});
 				barcontainer.append(bar);
 				closebutton.append(closei);
@@ -56,8 +58,10 @@
 			}
 			function setPerc(id, link) {
 				$('#' + id).data(link)
+				compMB = Math.round($('#' + id).data()['completed'] / (1024 * 1024) * 10) / 10
+				sizeMB = Math.round($('#' + id).data()['filesize'] / (1024 * 1024) * 10) / 10
 				$('#' + id).data()['perc'] = Math.round(($('#' + id).data()['completed'] / $('#' + id).data()['filesize'])*1000)/10
-				$('#'+ id + ' .perc').text($('#' + id).data()['perc'] + '%');
+				$('#'+ id + ' .perc').text(compMB + ' MiB / ' + sizeMB + ' MiB (' + $('#' + id).data()['perc'] + '%)');
 				$('#'+ id + ' .rate').text(Math.round($('#' + id).data()['rate']/102.4)/10 + ' kB/s');
 				// $('#'+ id).data()['perc'] = link['perc'];
 

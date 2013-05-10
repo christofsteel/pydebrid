@@ -103,7 +103,7 @@ class DownloadBitch(threading.Thread):
 
 	def load(self, timeout):
 		try:
-			myUrlclass = MyURLOpener()
+			request = urllib.request.Request(self.link['link'])
 			dlFile = os.path.join(self.pimp.folder, self.link['filename'] + '.fuck')
 			if os.path.exists(os.path.join(self.pimp.folder, self.link['filename'])):
 				print("already downloaded")
@@ -113,17 +113,18 @@ class DownloadBitch(threading.Thread):
 				mode = 'ab'
 				existSize = os.path.getsize(dlFile)
 				#If the file exists, then only download the remainder
-				myUrlclass.addheader("Range","bytes=%s-" % (existSize))
 				self.link['completed'] = existSize
+				request.headers['Range'] = "bytes=%s-" % self.link['completed']
 			else:
 				mode = 'wb'
 			if self._cancled:
 				raise Cancled
-			with urllib.request.urlopen(self.link['link'], timeout = timeout) as download:
-				toLoad = int(download.getheader("Content-Length"))
-				if download.status == 206:
+			with urllib.request.urlopen(request, timeout = timeout) as download:
+				toLoad = download.getheader("Content-Length")
+				print(download.getcode())
+				if download.getcode() == 206:
+					print("appending")
 					mode = 'ab'
-					self.link['filesize'] += self.link['completed']
 				else:
 					mode = 'wb'
 				if toLoad == None:
@@ -135,7 +136,7 @@ class DownloadBitch(threading.Thread):
 						if self._cancled:
 							raise Cancled
 						fuck.write(chunk)
-						self.link['completed'] += len(chunk)
+						self.link['completed'] = os.path.getsize(fuck.name)
 						chunk = download.read(self.chunksize)
 						etime = time.time()
 						self.link['rate'] = self.chunksize / (etime - stime)
