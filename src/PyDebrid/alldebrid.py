@@ -17,7 +17,6 @@ class AlldebridRequest:
 		return self.opener.open("http://www.alldebrid.de/register/?" + params)
 
 	def getLink(self, link):
-		print("Decrypring " + link)
 		params = urllib.parse.urlencode({'link': link, 'nb': '0', 'json':'true', 'pw':''})
 		try:
 			response = self.opener.open("http://www.alldebrid.de/service.php?" + params)
@@ -28,5 +27,6 @@ class AlldebridRequest:
 		json_response = json.loads(json_str)
 		json_response['filename'] = os.path.basename(json_response['link'])
 		if json_response['error']:
+			print("[ALDEBRID ERROR] " + json_response['error'])
 			raise AlldebridError
 		return (json_response['link'], json_response['filename'], json_response['filesize'])
