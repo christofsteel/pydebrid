@@ -1,4 +1,3 @@
-import hashlib
 import os
 import queue
 import urllib
@@ -7,6 +6,7 @@ import socket
 import shutil
 import threading
 import time
+import hashlib
 from PyDebrid.alldebrid import AlldebridError
 
 class WentWrong(Exception):
@@ -30,7 +30,6 @@ class DownloadPimp(threading.Thread):
 		self.alldebrid = alldebrid
 
 	def addddl(self, link):
-		link['och'] = False
 		if not 'filesize' in link:
 			with urllib.request.urlopen(self.link['link'], timeout = 5) as download:
 				self.link['filesize'] = int(download.getheader("Content-Length"))
@@ -46,9 +45,11 @@ class DownloadPimp(threading.Thread):
 		self.links[link['id']] = link
 
 	def add(self, link):
-		link['och'] = True
 		if not 'link' in link or not 'filename' in link:
-			link['link'], link['filename'], link['filesize'] = self.alldebrid.getLink(link['olink'])
+			try:
+				link['link'], link['filename'], link['filesize'] = self.alldebrid.getLink(link['olink'])
+			except AlldebridError:
+				self.add(link)
 			link['id'] = hashlib.md5(link['filename'].encode('utf-8')).hexdigest()
 
 		if 'group' in link and not link['group'] in self.groups:
@@ -68,7 +69,6 @@ class DownloadPimp(threading.Thread):
 	def run(self):
 		while True:
 			link = self.queue.get()
-			print("Pop")
 			try:
 				if link['och']:
 					link['link'], link['filename'], link['filesize'] = self.alldebrid.getLink(link['olink']) # Update Link
@@ -79,7 +79,7 @@ class DownloadPimp(threading.Thread):
 				bitch.start()
 			except (AlldebridError):
 				print("could not get alldebrid Link, putting back into queue")
-				self.addddl(link)
+				self.add(link)
 
 class MyURLOpener(urllib.request.FancyURLopener):
     """Create sub-class in order to overide error 206.  This error means a
@@ -121,7 +121,6 @@ class DownloadBitch(threading.Thread):
 				raise Cancled
 			with urllib.request.urlopen(request, timeout = timeout) as download:
 				toLoad = download.getheader("Content-Length")
-				print(download.getcode())
 				if download.getcode() == 206:
 					print("appending")
 					mode = 'ab'
@@ -131,6 +130,7 @@ class DownloadBitch(threading.Thread):
 					raise WentWrong
 				with open(dlFile, mode) as fuck:
 					chunk = download.read(self.chunksize)
+					print(self.link['olink'] + ": " + download.getheader('Content-Type'))
 					while chunk != b'':
 						stime = time.time()
 						if self._cancled:
@@ -149,19 +149,20 @@ class DownloadBitch(threading.Thread):
 
 
 	def run(self):
-		timeout = 2
+		timeout = 10
 		print("Downloading " + self.link['filename'] + " (" + self.link['link'] + ")")
 		try:
 			self.load(timeout)
 			print("Finished " + self.link['filename'])
+			print(self.link)
 			shutil.move(os.path.join(self.pimp.folder, self.link['filename'] + ".fuck"), os.path.join(self.pimp.folder, self.link['filename']))
 			if self.link['och']:
-				print("A OCH is loaded")
+				print("An OCH Link is completed")
 				self.pimp.groups[self.link['group']].remove(self.link['id'])
 				print(self.pimp.groups)
 				if self.pimp.groups[self.link['group']] == []:
 					print("Finished Group " + self.link['group'])
-					if self.link['unpacK']:
+					if self.link['unpack']:
 						if self.link['password']:
 							print("Unpacking " + self.link['filename'] + " with password \"" + self.link['password'] + "\"")
 						else:
@@ -169,11 +170,13 @@ class DownloadBitch(threading.Thread):
 			del self.pimp.links[self.link['id']]
 
 		except AlreadyDownloaded:
+			self.pimp.groups[self.link['group']].remove(self.link['id'])
 			del self.pimp.links[self.link['id']]
 
 		except Cancled:
 			print("Cancled " + self.link['filename'])
 			os.remove(os.path.join(self.pimp.folder, self.link['filename'] + '.fuck'))
+			self.pimp.groups[self.link['group']].remove(self.link['id'])
 			del self.pimp.links[self.link['id']]
 
 		except WentWrong:

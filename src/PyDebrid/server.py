@@ -33,14 +33,14 @@ def add_och():
 	password = request.POST.get('password', '')
 	gname = hashlib.md5(str.join("", links).encode("utf-8")).hexdigest()
 	for link in links:
-		app.pydebrid.pimp.add({'olink': link, 'group': gname, 'unpack': unpack, 'password': password})
+		app.pydebrid.pimp.add({'olink': link, 'group': gname, 'unpack': unpack, 'password': password, 'och': True})
 	return {'message': 'Added links to queue'}
 
 @app.post("/add_ddl")
 def add_ddl():
 	links = request.POST.get('ddl_links', '').strip().split()
 	for link in links:
-		app.pydebrid.pimp.addddl({'link': link})
+		app.pydebrid.pimp.addddl({'link': link, 'och': False})
 	return {'message': 'Added Direct Download Links'}
 
 
@@ -52,6 +52,7 @@ def captcha(id):
 @app.post("/sj")
 def serienjunkies():
 	link = request.POST.get('link', '').strip()
+	print("SJ " + link)
 	sj = SerienjunkiesLink(link)
 	app.pydebrid.sj[sj.id] = sj
 	return {'id': sj.id}
@@ -63,6 +64,6 @@ def sjcaptcha():
 	links = app.pydebrid.sj[id].getLinks(captcha)
 	gname = hashlib.md5(str.join("", links).encode("utf-8")).hexdigest()
 	for link in links:
-		app.pydebrid.pimp.add({'olink': link, 'group': gname, 'unpack': "unpack", 'password': 'serienjunkies.org'})
+		app.pydebrid.pimp.add({'olink': link, 'group': gname, 'unpack': "unpack", 'password': 'serienjunkies.org', 'och': False})
 	return {'message': 'Added links to queue'}
 
