@@ -7,6 +7,7 @@ import shutil
 import threading
 import time
 import hashlib
+import http
 from PyDebrid.alldebrid import AlldebridError
 
 class WentWrong(Exception):
@@ -140,16 +141,16 @@ class DownloadBitch(threading.Thread):
 						chunk = download.read(self.chunksize)
 						etime = time.time()
 						self.link['rate'] = self.chunksize / (etime - stime)
-		except (urllib.error.URLError, socket.timeout, ConnectionResetError):
+		except (urllib.error.URLError, socket.timeout, ConnectionResetError, http.client.BadStatusLine):
 			if self._cancled:
 				raise Cancled
-			print("Timeout retrying " + self.link['filename'])
+			print("Retrying " + self.link['filename'])
 			time.sleep(2)
 			raise WentWrong
 
 
 	def run(self):
-		timeout = 10
+		timeout = 15
 		print("Downloading " + self.link['filename'] + " (" + self.link['link'] + ")")
 		try:
 			self.load(timeout)
