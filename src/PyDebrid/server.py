@@ -61,9 +61,7 @@ def serienjunkies():
 def sjcaptcha():
 	captcha = request.POST.get('captcha', '').strip()
 	id = request.POST.get('captchaid', '').strip()
-	links = app.pydebrid.sj[id].getLinks(captcha)
-	gname = hashlib.md5(str.join("", links).encode("utf-8")).hexdigest()
-	for link in links:
-		app.pydebrid.pimp.add({'olink': link, 'group': gname, 'unpack': "unpack", 'password': 'serienjunkies.org', 'och': False})
+	app.pydebrid.sj[id].setCaptcha(captcha)
+	app.pydebrid.sj[id].start()
 	return {'message': 'Added links to queue'}
 
