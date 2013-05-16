@@ -140,7 +140,7 @@ class DownloadBitch(threading.Thread):
 						chunk = download.read(self.chunksize)
 						etime = time.time()
 						self.link['rate'] = self.chunksize / (etime - stime)
-		except (urllib.error.URLError, socket.timeout):
+		except (urllib.error.URLError, socket.timeout, ConnectionResetError):
 			if self._cancled:
 				raise Cancled
 			print("Timeout retrying " + self.link['filename'])
@@ -180,7 +180,6 @@ class DownloadBitch(threading.Thread):
 			del self.pimp.links[self.link['id']]
 
 		except WentWrong:
-			print("Something went wrong, putting download back into the queue.")
 			if self.link['och']:
 				self.pimp.groups[self.link['group']].remove(self.link['id'])
 			del self.pimp.links[self.link['id']]
