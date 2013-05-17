@@ -159,6 +159,8 @@ class DownloadBitch(threading.Thread):
 		timeout = 15
 		print("Downloading " + self.link['filename'] + " (" + self.link['link'] + ")")
 		try:
+			self.pimp.loads.get()
+			del self.pimp.links[self.link['id']]
 			self.load(timeout)
 			print("Finished " + self.link['filename'])
 			shutil.move(os.path.join(self.pimp.folder, self.link['filename'] + ".fuck"), os.path.join(self.pimp.folder, self.link['filename']))
@@ -185,10 +187,10 @@ class DownloadBitch(threading.Thread):
 							os.remove(os.path.join(self.pimp.folder, filename))
 						print("Done extracting and deleting")
 					del self.pimp.groups[self.link['group']]
-			del self.pimp.links[self.link['id']]
-			self.pimp.loads.get()
 
 		except AlreadyDownloaded:
+			self.pimp.loads.get()
+			del self.pimp.links[self.link['id']]
 			if self.link['och']:
 				self.pimp.groups[self.link['group']]['ids'].remove(self.link['id'])
 				if self.pimp.groups[self.link['group']]['ids'] == []:
@@ -212,8 +214,6 @@ class DownloadBitch(threading.Thread):
 							os.remove(os.path.join(self.pimp.folder, filename))
 						print("Done extracting and deleting")
 					del self.pimp.groups[self.link['group']]
-			del self.pimp.links[self.link['id']]
-			self.pimp.loads.get()
 
 		except Cancled:
 			print("Cancled " + self.link['filename'])
