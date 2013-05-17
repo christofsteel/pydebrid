@@ -46,14 +46,15 @@ class DownloadPimp(threading.Thread):
 			link['completed'] = 0
 
 		link['rate'] = 0
-		self.queue.put(link)
 		self.links[link['id']] = link
+		self.queue.put(link)
 
 	def add(self, link):
 		if not 'link' in link or not 'filename' in link:
 			try:
 				link['link'], link['filename'], link['filesize'] = self.alldebrid.getLink(link['olink'])
 			except AlldebridError:
+				time.sleep(15)
 				self.add(link)
 			link['id'] = hashlib.md5(link['filename'].encode('utf-8')).hexdigest()
 
@@ -71,8 +72,8 @@ class DownloadPimp(threading.Thread):
 
 		link['loading'] = False
 		link['rate'] = 0
-		self.queue.put(link)
 		self.links[link['id']] = link
+		self.queue.put(link)
 
 	def run(self):
 		while True:
@@ -87,6 +88,8 @@ class DownloadPimp(threading.Thread):
 				bitch.start()
 			except (AlldebridError):
 				print("could not get alldebrid Link, putting back into queue")
+				self.loads.get()
+				time.sleep(15)
 				self.add(link)
 
 class MyURLOpener(urllib.request.FancyURLopener):
