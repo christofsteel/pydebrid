@@ -120,7 +120,7 @@ class DownloadBitch(threading.Thread):
 				print("already downloaded")
 				raise AlreadyDownloaded
 			if os.path.exists(dlFile):
-				print("file exists")
+				print("file exists, appending")
 				mode = 'ab'
 				existSize = os.path.getsize(dlFile)
 				#If the file exists, then only download the remainder
@@ -133,7 +133,6 @@ class DownloadBitch(threading.Thread):
 			with urllib.request.urlopen(request, timeout = timeout) as download:
 				toLoad = download.getheader("Content-Length")
 				if download.getcode() == 206:
-					print("appending")
 					mode = 'ab'
 				else:
 					mode = 'wb'
@@ -141,7 +140,8 @@ class DownloadBitch(threading.Thread):
 					raise WentWrong
 				with open(dlFile, mode) as fuck:
 					chunk = download.read(self.chunksize)
-					print(self.link['olink'] + ": " + download.getheader('Content-Type'))
+					if download.getheader('Content-Type') == "text/html":
+						raise WentWrong
 					while chunk != b'':
 						stime = time.time()
 						if self._cancled:
