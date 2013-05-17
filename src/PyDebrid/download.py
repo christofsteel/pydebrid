@@ -50,30 +50,29 @@ class DownloadPimp(threading.Thread):
 		self.queue.put(link)
 
 	def add(self, link):
-		if not 'link' in link or not 'filename' in link:
-			try:
-				link['link'], link['filename'], link['filesize'] = self.alldebrid.getLink(link['olink'])
-			except AlldebridError:
-				time.sleep(15)
-				self.add(link)
+		try:
+			link['link'], link['filename'], link['filesize'] = self.alldebrid.getLink(link['olink'])
 			link['id'] = hashlib.md5(link['filename'].encode('utf-8')).hexdigest()
 
-		if 'group' in link and not link['group'] in self.groups:
-			self.groups[link['group']] = {}
-			self.groups[link['group']]['ids'] = []
-			self.groups[link['group']]['filenames'] = []
+			if 'group' in link and not link['group'] in self.groups:
+				self.groups[link['group']] = {}
+				self.groups[link['group']]['ids'] = []
+				self.groups[link['group']]['filenames'] = []
 
-		if 'group' in link:
-			self.groups[link['group']]['ids'].append(link['id'])
-			self.groups[link['group']]['filenames'].append(link['filename'])
+			if 'group' in link:
+				self.groups[link['group']]['ids'].append(link['id'])
+				self.groups[link['group']]['filenames'].append(link['filename'])
 
-		if not 'completed' in link:
-			link['completed'] = 0
+			if not 'completed' in link:
+				link['completed'] = 0
 
-		link['loading'] = False
-		link['rate'] = 0
-		self.links[link['id']] = link
-		self.queue.put(link)
+			link['loading'] = False
+			link['rate'] = 0
+			self.links[link['id']] = link
+			self.queue.put(link)
+		except AlldebridError:
+			time.sleep(15)
+			self.add(link)
 
 	def run(self):
 		while True:
@@ -229,8 +228,8 @@ class DownloadBitch(threading.Thread):
 			if self.link['och']:
 				self.pimp.groups[self.link['group']]['ids'].remove(self.link['id'])
 				self.pimp.groups[self.link['group']]['filenames'].remove(self.link['filename'])
-			del self.pimp.links[self.link['id']]
 			self.pimp.loads.get()
+			del self.pimp.links[self.link['id']]
 			time.sleep(10)
 			if self.link['och']:
 				self.pimp.add(self.link)
