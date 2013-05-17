@@ -63,27 +63,10 @@
 				$('#' + id).data()['perc'] = Math.round(($('#' + id).data()['completed'] / $('#' + id).data()['filesize'])*1000)/10
 				$('#'+ id + ' .perc').text(compMB + ' MiB / ' + sizeMB + ' MiB (' + $('#' + id).data()['perc'] + '%)');
 				$('#'+ id + ' .rate').text(Math.round($('#' + id).data()['rate']/102.4)/10 + ' kB/s');
-				// $('#'+ id).data()['perc'] = link['perc'];
 
 			}
 			function update() {
 				$.getJSON('/list', function(data) {
-/*					var idPercDict = {}
-					$('#queue li').each(function (element) {
-						idPercDict[$(this).attr('id')] = $(this).attr('data-perc');
-					});
-					linklist = data['links'];
-					$('#queue').empty();
-					for(i = 0; i < linklist.length; i++) {
-						link = linklist[i];
-						perc = link['perc'];
-						link['perc'] = idPercDict[link['id']];
-						elem = genElement(link);
-						$('#queue').prepend(elem);
-						link['perc'] = perc;
-						setPerc(link['id'], perc);
-					}*/
-
 				  $('#queue li').each(function (element) {
 					  if(data[$(this).attr('id')] == undefined) {
 						  $(this).remove();
@@ -98,7 +81,6 @@
 
 					}
 				  });
-//				  $('#queue li').tsort({data:'perc'});
 				  $list = $('#queue');
 				  $listLi = $('li', $list);
 				  $listLi.sort(compare);
@@ -167,7 +149,7 @@
 					<div class="tab-pane" id="serienjunkies">
 						<form action="/sj" method="post">
 							<div class="input-append">
-								<input type="text" name="link" />
+								<input type="text" id="sjlink" name="link" />
 								<input type="submit" class="btn" value="Get Secure IMG" />
 							</div>
 						</form>
@@ -181,7 +163,7 @@
 									success: function(result) {
 										$('#captchaid').attr("value", result['id']);
 										$('#captchaimg').attr('src', "/" + result['id'] + "/captcha.jpg");
-										$('#captchaform').collapse({toggle: true});
+										$('#captchaform').collapse('show');
 									}
 								})
 
@@ -211,11 +193,12 @@
 							    url: frm.attr('action'),
 							    data: frm.serialize(),
 							    success: function (data) {
-								    $('.collapse').collapse({toggle: false});
+								    $('#captchaform').collapse('hide');
 								    addMessage(data['message']);
+								    frm.find('textarea').val('');
+								    $('#sjlink').val('');
 							    }
 							});
-							frm.find('textarea').val('');
 
 							return false;
 						});

@@ -8,7 +8,11 @@ import threading
 import time
 import hashlib
 import http
+import rarfile
 from PyDebrid.alldebrid import AlldebridError
+
+class NoPasswordError(Exception):
+	pass
 
 class WentWrong(Exception):
 	pass
@@ -54,10 +58,13 @@ class DownloadPimp(threading.Thread):
 			link['id'] = hashlib.md5(link['filename'].encode('utf-8')).hexdigest()
 
 		if 'group' in link and not link['group'] in self.groups:
-			self.groups[link['group']] = []
+			self.groups[link['group']] = {}
+			self.groups[link['group']]['ids'] = []
+			self.groups[link['group']]['filenames'] = []
 
 		if 'group' in link:
-			self.groups[link['group']].append(link['id'])
+			self.groups[link['group']]['ids'].append(link['id'])
+			self.groups[link['group']]['filenames'].append(link['filename'])
 
 		if not 'completed' in link:
 			link['completed'] = 0
@@ -159,36 +166,79 @@ class DownloadBitch(threading.Thread):
 			shutil.move(os.path.join(self.pimp.folder, self.link['filename'] + ".fuck"), os.path.join(self.pimp.folder, self.link['filename']))
 			if self.link['och']:
 				print("An OCH Link is completed")
-				self.pimp.groups[self.link['group']].remove(self.link['id'])
-				print(self.pimp.groups)
-				if self.pimp.groups[self.link['group']] == []:
+				self.pimp.groups[self.link['group']]['ids'].remove(self.link['id'])
+				if self.pimp.groups[self.link['group']]['ids'] == []:
 					print("Finished Group " + self.link['group'])
 					if self.link['unpack']:
+						firstVolume = None
+						for filename in self.pimp.groups[self.link['group']]['filenames']:
+							try:
+								rf = rarfile.RarFile(os.path.join(self.pimp.folder, filename))
+								firstVolume = filename
+							except rarfile.NeedFirstVolume:
+								pass
+						print("First Volume is " + firstVolume)
+						rf = rarfile.RarFile(os.path.join(self.pimp.folder, firstVolume))
 						if self.link['password']:
-							print("Unpacking " + self.link['filename'] + " with password \"" + self.link['password'] + "\"")
+							print("Unpacking " + firstVolume+ " with password \"" + self.link['password'] + "\"")
 						else:
-							print("Unpacking " + self.link['filename'])
+							print("Unpacking " + firstVolume)
+						if rf.needs_password() and not self.link['password']:
+							raise NoPasswordError
+						rf.extractall(path=self.pimp.folder, pwd=self.link['password'])
+						print("Done extracting, deleting Files")
+						for filename in self.pimp.groups[self.link['group']]['filenames']:
+							os.remove(os.path.join(self.pimp.folder, filename))
+					del self.pimp.groups[self.link['group']]
 			del self.pimp.links[self.link['id']]
+			self.pimp.loads.get()
 
 		except AlreadyDownloaded:
-			self.pimp.groups[self.link['group']].remove(self.link['id'])
+			if self.link['och']:
+				print("An OCH Link is completed")
+				self.pimp.groups[self.link['group']]['ids'].remove(self.link['id'])
+				if self.pimp.groups[self.link['group']]['ids'] == []:
+					print("Finished Group " + self.link['group'])
+					if self.link['unpack']:
+						firstVolume = None
+						for filename in self.pimp.groups[self.link['group']]['filenames']:
+							try:
+								rf = rarfile.RarFile(os.path.join(self.pimp.folder, filename))
+								firstVolume = filename
+							except rarfile.NeedFirstVolume:
+								pass
+						print("First Volume is " + firstVolume)
+						rf = rarfile.RarFile(os.path.join(self.pimp.folder, firstVolume))
+						if self.link['password']:
+							print("Unpacking " + firstVolume + " with password \"" + self.link['password'] + "\"")
+						else:
+							print("Unpacking " + firstVolume)
+						if rf.needs_password() and not self.link['password']:
+							raise NoPasswordError
+						rf.extractall(path=self.pimp.folder, pwd=self.link['password'])
+						print("Done extracting, deleting Files")
+						for filename in self.pimp.groups[self.link['group']]['filenames']:
+							os.remove(os.path.join(self.pimp.folder, filename))
+					del self.pimp.groups[self.link['group']]
 			del self.pimp.links[self.link['id']]
+			self.pimp.loads.get()
 
 		except Cancled:
 			print("Cancled " + self.link['filename'])
 			os.remove(os.path.join(self.pimp.folder, self.link['filename'] + '.fuck'))
-			self.pimp.groups[self.link['group']].remove(self.link['id'])
+			self.pimp.groups[self.link['group']]['ids'].remove(self.link['id'])
 			del self.pimp.links[self.link['id']]
+			self.pimp.loads.get()
 
 		except WentWrong:
 			if self.link['och']:
-				self.pimp.groups[self.link['group']].remove(self.link['id'])
+				self.pimp.groups[self.link['group']]['ids'].remove(self.link['id'])
+				self.pimp.groups[self.link['group']]['filenames'].remove(self.link['filename'])
 			del self.pimp.links[self.link['id']]
 			if self.link['och']:
 				self.pimp.add(self.link)
 			else:
 				self.pimp.addddl(self.link)
 
-		self.pimp.loads.get()
 
 
