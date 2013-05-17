@@ -239,6 +239,7 @@ class DownloadBitch(threading.Thread):
 				self.pimp.add(self.link)
 			else:
 				self.pimp.addddl(self.link)
+			self.pimp.loads.get()
 
 
 
