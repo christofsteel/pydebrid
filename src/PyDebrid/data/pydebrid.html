@@ -47,7 +47,12 @@
 				return(li);
 			}
 			function compare(a, b) {
-				return($(a).data()['perc'] > $(b).data()['perc']);
+				if($(a).data()['perc'] > $(b).data()['perc']) {
+					retur(true);
+				} else if ($(a).data()['perc'] == $(b).data()['perc']) {
+					return ($(a).data()['filename'] > $(b).data()['filename']);
+				}
+				// ireturn($(a).data()['perc'] > $(b).data()['perc'] || $(a).data()['perc'] == $(b).data()['perc'] && $(a).data()['filename'] > $(b).data()['filename'])
 			}
 
 			function remove(id) {

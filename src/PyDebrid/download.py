@@ -161,9 +161,9 @@ class DownloadBitch(threading.Thread):
 		timeout = 15
 		print("Downloading " + self.link['filename'] + " (" + self.link['link'] + ")")
 		try:
+			self.load(timeout)
 			self.pimp.loads.get()
 			del self.pimp.links[self.link['id']]
-			self.load(timeout)
 			print("Finished " + self.link['filename'])
 			shutil.move(os.path.join(self.pimp.folder, self.link['filename'] + ".fuck"), os.path.join(self.pimp.folder, self.link['filename']))
 			if self.link['och']:

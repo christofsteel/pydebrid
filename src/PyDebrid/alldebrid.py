@@ -26,6 +26,6 @@ class AlldebridRequest:
 		json_response = json.loads(json_str)
 		json_response['filename'] = os.path.basename(json_response['link'])
 		if json_response['error']:
-			print("[ALLDEBRID ERROR] " + json_response['error'])
+			print("[ALLDEBRID ERROR] (" + link + ") " + json_response['error'])
 			raise AlldebridError
 		return (json_response['link'], json_response['filename'], json_response['filesize'])
