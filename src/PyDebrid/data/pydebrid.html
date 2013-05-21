@@ -41,16 +41,16 @@
 				restartbutton.append(restarti);
 				li.append(restartbutton);
 				li.append(text);
-				li.append(barcontainer);
+				li.append(barcontainer);305.5
 				li.append(percdiv);
 				li.append(rate);
 				return(li);
 			}
 			function compare(a, b) {
 				if($(a).data()['perc'] > $(b).data()['perc']) {
-					retur(true);
+					return (true);
 				} else if ($(a).data()['perc'] == $(b).data()['perc']) {
-					return ($(a).data()['filename'] > $(b).data()['filename']);
+					return ($(a).data()['filename'] < $(b).data()['filename']);
 				}
 				// ireturn($(a).data()['perc'] > $(b).data()['perc'] || $(a).data()['perc'] == $(b).data()['perc'] && $(a).data()['filename'] > $(b).data()['filename'])
 			}
