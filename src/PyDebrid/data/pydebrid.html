@@ -126,6 +126,7 @@
 				<ul class="nav nav-tabs" id="nav">
 					<li class="active"><a href="#och" data-toggle="tab">One Click Hoster</a></li>
 					<li><a href="#ddl" data-toggle="tab">Direct Download</a></li>
+					<li><a href="#dlc" data-toggle="tab">DLC</a></li>
 					<li><a href="#serienjunkies" data-toggle="tab">SerienJunkies</a></li>
 					<li><a href="#torrent" data-toggle="tab">Torrent</a></li>
 				</ul>
@@ -151,6 +152,42 @@
 							<input type="submit" class="btn btn-primary" value="Add" />
 						</form>
 					</div>
+					<div class="tab-pane" id="dlc">
+						<form action="/add_dlc" id="form_dlc" enctype="multipart/form-data" method="post">
+							<input type="file" id="dlc_file" name="dlc_file" /><br />
+							<input type="submit" class="btn btn-primary" value="Add" />
+							<button type="button" class="btn" data-toggle="collapse" data-target="#dlc_collapse">
+								Options
+							</button>
+							<div class="collapse" id="dlc_collapse">
+								<div class="well">
+									<label for="unpack" class="checkbox"><input type="checkbox" value="unpack" name="unpack" id="dlc_unpack">Auto unpack</label>
+									<label for="password"><input type="text" placeholder="Password" id="dlc_password" name="password"></label>
+								</div>
+							</div>
+						</form>
+					</div>
+					<script>
+						$("#form_dlc").submit(function(e) {
+							frm = $(this);
+							dlc_data = new FormData($(this));
+							dlc_data.append( 'dlc_file', $( '#dlc_file' )[0].files[0] );
+							dlc_data.append( 'unpack', $( '#dlc_unpack' )[0].checked )
+							dlc_data.append( 'password', $( '#dlc_password' )[0].value )
+							$.ajax({
+								type: frm.attr('method'),
+								url: frm.attr('action'),
+								processData: false,
+								contentType: false,
+								data: dlc_data,
+								success: function(data){
+									addMessage(data['message']);
+								}
+							});
+							e.preventDefault();
+							return false;
+						});
+					</script>
 					<div class="tab-pane" id="serienjunkies">
 						<form action="/sj" method="post">
 							<div class="input-append">
@@ -171,7 +208,6 @@
 										$('#captchaform').collapse('show');
 									}
 								})
-
 								return false;
 							});
 						</script>

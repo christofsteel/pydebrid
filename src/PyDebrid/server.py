@@ -1,8 +1,9 @@
-from bottle import request, response, route, run, Bottle, TEMPLATE_PATH, static_file
-from bottle import jinja2_view as view, jinja2_template as template
+from bottle import request, response, TEMPLATE_PATH, static_file
+from bottle import jinja2_template as template
 from PyDebrid import __path__
 from PyDebrid.application import app
 from PyDebrid.serienjunkies import SerienjunkiesLink
+from PyDebrid.container import ContainerDecrypter
 import hashlib
 
 TEMPLATE_PATH.insert(0,__path__[0]+"/data/")
@@ -63,5 +64,19 @@ def sjcaptcha():
 	id = request.POST.get('captchaid', '').strip()
 	app.pydebrid.sj[id].setCaptcha(captcha)
 	app.pydebrid.sj[id].start()
+	
 	return {'message': 'Added links to queue'}
+
+@app.post("/add_dlc")
+def add_dlc():
+	dlc_file = str(request.files.get('dlc_file').file.read(), "utf-8")
+	unpack = request.POST.get('unpack', '')
+	password = request.POST.get('password', '')
+	if unpack == "true":
+		unpack = "unpack"
+	else:
+		unpack = ""
+	cd = ContainerDecrypter(dlc_file, unpack = unpack, password = password)
+	cd.start()
+	return {'message': 'Decrypting DLC'}
 
