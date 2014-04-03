@@ -3,7 +3,7 @@ Description=Pydebrid
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/pydebrid -c /etc/pydebrid/pydebrid.conf
+ExecStart=/usr/bin/pydebrid -c /etc/conf.d/pydebrid.conf
 User=pydebrid
 Group=pydebrid
 
