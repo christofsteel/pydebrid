@@ -1,0 +1,13 @@
+post_upgrade() {
+  # if the group or user already exists, the request will be denied 
+  # and all original settings will be retained
+  groupadd -r pydebrid &> /dev/null
+  useradd -s /sbin/nologin -c "Pydebrid user" \
+          -g pydebrid -r pydebrid &> /dev/null
+}
+
+post_remove() {
+  userdel pydebrid &> /dev/null 
+  groupdel pydebrid &> /dev/null || /bin/true
+}
+

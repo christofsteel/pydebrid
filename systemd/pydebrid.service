@@ -1,0 +1,11 @@
+[Unit]
+Description=Pydebrid
+After=network.target
+
+[Service]
+ExecStart=pydebrid -c /etc/pydebrid/pydebrid.conf
+User=pydebrid
+Group=pydebrid
+
+[Install]
+WantedBy=multi-user.target

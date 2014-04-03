@@ -9,10 +9,11 @@ pkgdesc="A Download for OCH with Alldebrid"
 arch=(any)
 url="https://github.com/christofsteel"
 license=('Apache2')
-depends=('python' 'python-bottle' 'python-pyquery')
+depends=('python' 'python-bottle' 'python-pyquery' 'python3-rarfile' 'python-jinja')
 options=(!emptydirs)
 source=()
 md5sums=()
+install=${pkgname}.install
 
 _gitroot=https://github.com/christofsteel/pydebrid.git
 _gitname=pydebrid
@@ -38,6 +39,7 @@ build() {
 package() {
   cd "$srcdir/$_gitname-build"
   python setup.py install --root="$pkgdir/" --optimize=1
+  install -Dm644 "${srcdir}/$_gitname-build/systemd/pydebrid.service" "${pkgdir}/usr/lib/systemd/system/pydebrid.service"
 }
 
 # vim:set ts=2 sw=2 et:
