@@ -13,4 +13,4 @@ setup(name="pydebrid",
 	package_dir={'' : 'src/'},
 	scripts=['src/pydebrid'],
 	package_data={'PyDebrid': files},
-	install_requires=['jinja2', 'bottle'])
+	install_requires=['jinja2', 'bottle', 'pyquery', 'rarlib'])
