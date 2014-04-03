@@ -40,6 +40,7 @@ package() {
   cd "$srcdir/$_gitname-build"
   python setup.py install --root="$pkgdir/" --optimize=1
   install -Dm644 "${srcdir}/$_gitname-build/systemd/pydebrid.service" "${pkgdir}/usr/lib/systemd/system/pydebrid.service"
+  install -Dm644 "${srcdir}/$_gitname-build/pydebrid.conf.sample" "${pkgdir}/etc/conf.d/pydebrid.conf"
 }
 
 # vim:set ts=2 sw=2 et:

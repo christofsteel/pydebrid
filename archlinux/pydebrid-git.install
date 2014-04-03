@@ -1,3 +1,8 @@
+post_install() {
+	post_upgrade
+	echo "Remember to add your logindata to /etc/conf.d/pydebrid.conf"
+}
+
 post_upgrade() {
   # if the group or user already exists, the request will be denied 
   # and all original settings will be retained
