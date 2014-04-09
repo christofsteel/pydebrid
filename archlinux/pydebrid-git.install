@@ -6,9 +6,13 @@ post_install() {
 post_upgrade() {
   # if the group or user already exists, the request will be denied 
   # and all original settings will be retained
-  groupadd -r pydebrid &> /dev/null
-  useradd -s /sbin/nologin -c "Pydebrid user" \
-          -g pydebrid -r pydebrid &> /dev/null
+  if [ "$(id pydebrid 2> /dev/null)" ]; then
+	  echo "Pydebrid allready exists"
+  else
+	  groupadd -r pydebrid &> /dev/null
+	  useradd -s /sbin/nologin -c "Pydebrid user" \
+        	  -g pydebrid -r pydebrid &> /dev/null
+  fi
 }
 
 post_remove() {
