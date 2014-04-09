@@ -36,8 +36,8 @@ class DownloadPimp(threading.Thread):
 
 	def addddl(self, link):
 		if not 'filesize' in link:
-			with urllib.request.urlopen(self.link['link'], timeout = 5) as download:
-				self.link['filesize'] = int(download.getheader("Content-Length"))
+			with urllib.request.urlopen(link['link'], timeout = 5) as download:
+				link['filesize'] = int(download.getheader("Content-Length"))
 		link['filename'] = os.path.basename(link['link'])
 		link['id'] = hashlib.md5(link['filename'].encode('utf-8')).hexdigest()
 		link['loading'] = False
